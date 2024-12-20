@@ -25,6 +25,11 @@ ABlasterCharacter::ABlasterCharacter()
 	FollowCamera->bUsePawnControlRotation = false;
 }
 
+void ABlasterCharacter::BeginPlay()
+{
+	Super::BeginPlay();
+}
+
 void ABlasterCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
@@ -56,6 +61,7 @@ void ABlasterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 	EnhancedInputComponent->BindAction(Input_LookStick, ETriggerEvent::Triggered, this, &ABlasterCharacter::LookStick);
 }
 
+#pragma region Inputs
 void ABlasterCharacter::LookMouse(const FInputActionValue& InputValue)
 {
 	const FVector2D Value = InputValue.Get<FVector2D>();
@@ -100,12 +106,6 @@ void ABlasterCharacter::LookStick(const FInputActionValue& InputValue)
 	AddControllerPitchInput(Value.Y * (LookPitchRate * RateMultiplier) * GetWorld()->GetDeltaSeconds());
 }
 
-void ABlasterCharacter::BeginPlay()
-{
-	Super::BeginPlay();
-	
-}
-
 void ABlasterCharacter::Move(const FInputActionInstance& Instance)
 {
 	FRotator ControlRot = GetControlRotation();
@@ -140,4 +140,5 @@ void ABlasterCharacter::Move(const FInputActionInstance& Instance)
 		}
 	}*/
 }
+#pragma endregion 
 

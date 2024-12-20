@@ -26,22 +26,22 @@ protected:
 	virtual void BeginPlay() override;
 
 	/* MappingContext */
-	UPROPERTY(EditDefaultsOnly, Category= Input)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category= Input, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UInputMappingContext> DefaultInputMappingContext;
 
 	/* Jump Input Action */
-	UPROPERTY(EditDefaultsOnly, Category= Input)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category= Input, meta = (AllowPrivateAccess = "true"))
 	class UInputAction* Input_Jump;
 
 	/* Move Input Action */
-	UPROPERTY(EditDefaultsOnly, Category= Input)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category= Input, meta = (AllowPrivateAccess = "true"))
 	class UInputAction* Input_Move;
 
 	/* Look Input Action */
-	UPROPERTY(EditDefaultsOnly, Category= Input)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category= Input, meta = (AllowPrivateAccess = "true"))
 	class UInputAction* Input_LookMouse;
 
-	UPROPERTY(EditDefaultsOnly, Category= Input)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category= Input, meta = (AllowPrivateAccess = "true"))
 	class UInputAction* Input_LookStick;
 	
 	void Move(const FInputActionInstance& Instance);
