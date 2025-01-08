@@ -22,6 +22,8 @@ public:
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 protected:
 	virtual void BeginPlay() override;
 
@@ -59,7 +61,18 @@ private:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	class UWidgetComponent* OverheadWidget;
+
+	UPROPERTY(ReplicatedUsing = OnRep_OverlappingWeapon)
+	class AWeapon* OverlappingWeapon;
+
+	//Abbiamo aggiunto questo OnRepNotify per sapere quando un character deve mostrare il messaggio che è vicino a qualcosa da prendere,
+	//senza questo modo veniva mostrato il messaggio sopra l'arma del giocatore CLIENT e anche nel SERVER. Siccome OnRepNotify è CHIAMATO SOLO NEI CLIENTS adesso il messaggio lo vede solo più il client interessato
+	//Ma cosi facendo non è possibile vederlo nel giocatore che sta usando il SERVER, per questo in "SetOverlappingWeapon()" controlliamo se siamo il server
+	//NON VIENE CHIAMATA DA NOI, QUANDO CAMBIA LA VARIABILE ASSOCIATA CHIAMA QUESTO METODO. PUO' AVERE SOLO UNA VARIABILE IN INPUT DEL TIPO DELLA VAR CHE STA REPLICANDO
+	//LastWeapon contiene il valore che aveva in precedenza
+	UFUNCTION()
+	void OnRep_OverlappingWeapon(AWeapon* LastWeapon); 
 	
 public:
-	
+	void SetOverlappingWeapon(AWeapon* Weapon);
 };
