@@ -41,6 +41,10 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category= Input, meta = (AllowPrivateAccess = "true"))
 	class UInputAction* Input_Equip;
 
+	/* Crouch Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category= Input, meta = (AllowPrivateAccess = "true"))
+	class UInputAction* Input_Crouch;
+
 	/* Move Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category= Input, meta = (AllowPrivateAccess = "true"))
 	class UInputAction* Input_Move;
@@ -59,6 +63,8 @@ protected:
 	void LookStick(const FInputActionValue& InputValue);
 
 	void EquipButtonPressed();
+
+	void CrouchButtonPressed();
 
 private:
 	UPROPERTY(VisibleAnywhere, Category = Camera)
