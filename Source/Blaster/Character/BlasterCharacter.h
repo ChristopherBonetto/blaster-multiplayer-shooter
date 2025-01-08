@@ -24,6 +24,8 @@ public:
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
+	virtual void PostInitializeComponents() override;
+
 protected:
 	virtual void BeginPlay() override;
 
@@ -34,6 +36,10 @@ protected:
 	/* Jump Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category= Input, meta = (AllowPrivateAccess = "true"))
 	class UInputAction* Input_Jump;
+
+	/* Equip Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category= Input, meta = (AllowPrivateAccess = "true"))
+	class UInputAction* Input_Equip;
 
 	/* Move Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category= Input, meta = (AllowPrivateAccess = "true"))
@@ -51,6 +57,8 @@ protected:
 	void LookMouse(const FInputActionValue& InputValue);
 	
 	void LookStick(const FInputActionValue& InputValue);
+
+	void EquipButtonPressed();
 
 private:
 	UPROPERTY(VisibleAnywhere, Category = Camera)
@@ -71,8 +79,16 @@ private:
 	//NON VIENE CHIAMATA DA NOI, QUANDO CAMBIA LA VARIABILE ASSOCIATA CHIAMA QUESTO METODO. PUO' AVERE SOLO UNA VARIABILE IN INPUT DEL TIPO DELLA VAR CHE STA REPLICANDO
 	//LastWeapon contiene il valore che aveva in precedenza
 	UFUNCTION()
-	void OnRep_OverlappingWeapon(AWeapon* LastWeapon); 
+	void OnRep_OverlappingWeapon(AWeapon* LastWeapon);
+
+	UPROPERTY(VisibleAnywhere)
+	class UCombatComponent* Combat;
+
+	UFUNCTION(Server, Reliable) //RPC, puo essere reliable (lenta ma sicura) o non-reliable (piu veloce ma meno sicura, non assicura che l'informazione/pacchetto dati arrivi)
+	void ServerEquipButtonPressed();
 	
 public:
 	void SetOverlappingWeapon(AWeapon* Weapon);
+
+	bool IsWeaponEquipped();
 };

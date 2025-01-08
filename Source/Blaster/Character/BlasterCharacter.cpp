@@ -3,16 +3,17 @@
 
 #include "BlasterCharacter.h"
 
+//EnhancedInput
+#include "EnhancedInputSubsystems.h"
+#include "EnhancedInputComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
+
+#include "Components/WidgetComponent.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "Blaster/Weapon/Weapon.h"
-
-//EnhancedInput
-#include "EnhancedInputSubsystems.h"
-#include "EnhancedInputComponent.h"
-#include "Components/WidgetComponent.h"
-#include "GameFramework/CharacterMovementComponent.h"
+#include "Blaster/BlasterComponents/CombatComponent.h"
 
 ABlasterCharacter::ABlasterCharacter()
 {
@@ -33,6 +34,9 @@ ABlasterCharacter::ABlasterCharacter()
 
 	OverheadWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("OverheadWidget"));
 	OverheadWidget->SetupAttachment(RootComponent);
+
+	Combat = CreateDefaultSubobject<UCombatComponent>(TEXT("CombatComponent"));
+	Combat->SetIsReplicated(true); //LO RENDE REPLICATO, I COMPONENTI SONO SPECIALI E NON HANNO BISOGNO DI ESSERE REGISTRATI IN "GetLifetimeReplicatedProps()"
 }
 
 void ABlasterCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -53,6 +57,15 @@ void ABlasterCharacter::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 }
 
+void ABlasterCharacter::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+	if (Combat)
+	{
+		Combat->Character = this; //CHARACTER è PRIVATA, MA SICCOME ABBIAMO RESO LA CLASSE DI QUESTO COMPONENTE AMICA A BlasterCharacter ABBIAMO ACCESSO A TUTTO DA QUESTA CLASSE
+	}
+}
+
 void ABlasterCharacter::SetOverlappingWeapon(AWeapon* Weapon)
 {
 	if (OverlappingWeapon)
@@ -69,6 +82,11 @@ void ABlasterCharacter::SetOverlappingWeapon(AWeapon* Weapon)
 			OverlappingWeapon->ShowPickupWidget(true);
 		}
 	}
+}
+
+bool ABlasterCharacter::IsWeaponEquipped()
+{
+	return (Combat && Combat->EquippedWeapon);
 }
 
 void ABlasterCharacter::OnRep_OverlappingWeapon(AWeapon* LastWeapon) //CHIAMATO SOLO NEI CLIENTS
@@ -103,6 +121,7 @@ void ABlasterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 	//General
 	EnhancedInputComponent->BindAction(Input_Move, ETriggerEvent::Triggered, this, &ABlasterCharacter::Move);
 	EnhancedInputComponent->BindAction(Input_Jump, ETriggerEvent::Triggered, this, &ABlasterCharacter::Jump);
+	EnhancedInputComponent->BindAction(Input_Equip, ETriggerEvent::Triggered, this, &ABlasterCharacter::EquipButtonPressed);
 	EnhancedInputComponent->BindAction(Input_LookMouse, ETriggerEvent::Triggered, this, &ABlasterCharacter::LookMouse);
 
 	//Gamepad
@@ -187,6 +206,29 @@ void ABlasterCharacter::Move(const FInputActionInstance& Instance)
 			Pawn->AddMovementInput(MovementDirection, Value.Y);
 		}
 	}*/
+}
+
+void ABlasterCharacter::EquipButtonPressed()
+{
+	if (Combat) 
+	{
+		if (HasAuthority())
+		{
+			Combat->EquipWeapon(OverlappingWeapon); //Se ha l'autorità equipaggia l'arma, se no, manda una RPC/richiesta al server e sarà lui a mandare la risposta
+		}
+		else
+		{
+			ServerEquipButtonPressed(); //Non server usare il nome ServerEquipButtonPressed_Implementation perche _Implementation serve solo per la dicitura
+		}
+	}
+}
+
+void ABlasterCharacter::ServerEquipButtonPressed_Implementation()
+{
+	if (Combat)
+	{
+		Combat->EquipWeapon(OverlappingWeapon);
+	}
 }
 #pragma endregion 
 

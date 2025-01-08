@@ -29,4 +29,6 @@ void UBlasterAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	bIsInAir = BlasterCharacter->GetCharacterMovement()->IsFalling();
 
 	bIsAccelerating = BlasterCharacter->GetCharacterMovement()->GetCurrentAcceleration().Size() > 0.0f ? true : false;
+
+	bWeaponEquipped = BlasterCharacter->IsWeaponEquipped();
 }
