@@ -27,9 +27,22 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
+	void SetAiming(bool bIsAiming);
+
+	//Solo mettere bAiming come variabile replicata non bastava, perchè funziona solo se stiamo giocando con il server (il server manda l'info ai client, ma i client non mostrano il cambio di stato agli altri)
+	//Facciamo quindi una RPC per far gestire la chiamata al Server
+	UFUNCTION(Server, Reliable) 
+	void ServerSetAiming(bool bIsAiming);
+
+	UFUNCTION()
+	void OnRep_EquippedWeapon();
+
 private:
 	class ABlasterCharacter* Character;
 
-	UPROPERTY(Replicated)
+	UPROPERTY(ReplicatedUsing = OnRep_EquippedWeapon)
 	AWeapon* EquippedWeapon;
+
+	UPROPERTY(Replicated)
+	bool bAiming;
 };
