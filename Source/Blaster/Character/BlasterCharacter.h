@@ -6,6 +6,7 @@
 #include "InputActionValue.h"
 #include "InputAction.h"
 #include "GameFramework/Character.h"
+#include "Blaster/BlasterTypes/TurningInPlace.h"
 #include "BlasterCharacter.generated.h"
 
 class UInputMappingContext;
@@ -73,6 +74,8 @@ protected:
 	void AimButtonPressed();
 	void AimButtonReleased();
 
+	void AimOffset(float DeltaTime);
+
 private:
 	UPROPERTY(VisibleAnywhere, Category = Camera)
 	class USpringArmComponent* CameraBoom;
@@ -99,11 +102,25 @@ private:
 
 	UFUNCTION(Server, Reliable) //RPC, puo essere reliable (lenta ma sicura) o non-reliable (piu veloce ma meno sicura, non assicura che l'informazione/pacchetto dati arrivi)
 	void ServerEquipButtonPressed();
+
+	float AO_Yaw;
+	float InterpAO_Yaw;
+	float AO_Pitch;
+	FRotator StartingAimRotation;
+
+	ETurningInPlace TurningInPlace;
+
+	void TurnInPlace(float DeltaTime);
 	
 public:
 	void SetOverlappingWeapon(AWeapon* Weapon);
 
+	AWeapon* GetEquippedWeapon();
 	bool IsWeaponEquipped();
 
 	bool IsAiming();
+
+	FORCEINLINE float GetAO_Yaw() const { return AO_Yaw; }
+	FORCEINLINE float GetAO_Pitch() const { return AO_Pitch; }
+	FORCEINLINE ETurningInPlace GetTurningInPlace() const { return TurningInPlace; }
 };
