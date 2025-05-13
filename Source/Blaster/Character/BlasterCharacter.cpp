@@ -82,6 +82,25 @@ void ABlasterCharacter::PostInitializeComponents()
 	}
 }
 
+void ABlasterCharacter::PlayFireMontage(bool bAiming)
+{
+	if (Combat == nullptr || Combat->EquippedWeapon == nullptr)
+	{
+		return;
+	}
+
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if (AnimInstance && FireWeaponMontage)
+	{
+		AnimInstance->Montage_Play(FireWeaponMontage);
+		
+		FName SectionName;
+		SectionName = bAiming? FName("RifleAim") : FName( "RifleHip");
+
+		AnimInstance->Montage_JumpToSection(SectionName);
+	}
+}
+
 void ABlasterCharacter::SetOverlappingWeapon(AWeapon* Weapon)
 {
 	if (OverlappingWeapon)
@@ -157,6 +176,9 @@ void ABlasterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 	
 	EnhancedInputComponent->BindAction(Input_Aim, ETriggerEvent::Started, this, &ABlasterCharacter::AimButtonPressed);
 	EnhancedInputComponent->BindAction(Input_Aim, ETriggerEvent::Completed, this, &ABlasterCharacter::AimButtonReleased);
+
+	EnhancedInputComponent->BindAction(Input_Fire, ETriggerEvent::Started, this, &ABlasterCharacter::FireButtonPressed);
+	EnhancedInputComponent->BindAction(Input_Fire, ETriggerEvent::Completed, this, &ABlasterCharacter::FireButtonReleased);
 
 	EnhancedInputComponent->BindAction(Input_Equip, ETriggerEvent::Triggered, this, &ABlasterCharacter::EquipButtonPressed);
 
@@ -337,6 +359,22 @@ void ABlasterCharacter::AimOffset(float DeltaTime)
 		FVector2d InRange(270.f, 360.f);
 		FVector2d OutRange(-90.f, 0.f);
 		AO_Pitch = FMath::GetMappedRangeValueClamped(InRange, OutRange, AO_Pitch);
+	}
+}
+
+void ABlasterCharacter::FireButtonPressed()
+{
+	if (Combat)
+	{
+		Combat->FireButtonPressed(true);
+	}
+}
+
+void ABlasterCharacter::FireButtonReleased()
+{
+	if (Combat)
+	{
+		Combat->FireButtonPressed(false);
 	}
 }
 

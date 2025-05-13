@@ -27,6 +27,8 @@ public:
 
 	virtual void PostInitializeComponents() override;
 
+	void PlayFireMontage(bool bAiming);
+
 protected:
 	virtual void BeginPlay() override;
 
@@ -34,6 +36,10 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category= Input, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UInputMappingContext> DefaultInputMappingContext;
 
+	/* Fire Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category= Input, meta = (AllowPrivateAccess = "true"))
+	class UInputAction* Input_Fire;
+	
 	/* Jump Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category= Input, meta = (AllowPrivateAccess = "true"))
 	class UInputAction* Input_Jump;
@@ -78,6 +84,9 @@ protected:
 
 	virtual void Jump() override;
 
+	void FireButtonPressed();
+	void FireButtonReleased();
+
 private:
 	UPROPERTY(VisibleAnywhere, Category = Camera)
 	class USpringArmComponent* CameraBoom;
@@ -113,6 +122,9 @@ private:
 	ETurningInPlace TurningInPlace;
 
 	void TurnInPlace(float DeltaTime);
+
+	UPROPERTY(EditAnywhere, Category = Combat)
+	class UAnimMontage* FireWeaponMontage;
 	
 public:
 	void SetOverlappingWeapon(AWeapon* Weapon);
