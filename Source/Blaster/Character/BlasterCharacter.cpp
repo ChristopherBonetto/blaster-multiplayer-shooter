@@ -6,6 +6,7 @@
 //EnhancedInput
 #include "EnhancedInputSubsystems.h"
 #include "EnhancedInputComponent.h"
+#include "Blaster/Blaster.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 #include "Components/WidgetComponent.h"
@@ -42,7 +43,9 @@ ABlasterCharacter::ABlasterCharacter()
 
 	GetCharacterMovement()->NavAgentProps.bCanCrouch = true;
 
+	GetMesh()->SetCollisionObjectType(ECC_SkeletalMesh);
 	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
+	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
 	GetMesh()->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
 
 	GetCharacterMovement()->RotationRate = FRotator(0.f,0.f,850.f);
@@ -70,7 +73,22 @@ void ABlasterCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	// if (GetLocalRole() > ROLE_SimulatedProxy && IsLocallyControlled()) //TO AVOID TO CALL THIS FUNCTION FOR SIMULATED PROXY
+	// {
+	// 	AimOffset(DeltaTime);
+	// }
+	// else
+	// {
+	// 	TimeSinceLastMovementReplication += DeltaTime;
+	// 	if (TimeSinceLastMovementReplication > 0.25f)
+	// 	{
+	// 		OnRep_ReplicatedMovement();
+	// 	}
+	// 	CalculateAO_Pitch();
+	// }
 	AimOffset(DeltaTime);
+	
+	HideCameraIfCharacterClose();
 }
 
 void ABlasterCharacter::PostInitializeComponents()
@@ -98,6 +116,54 @@ void ABlasterCharacter::PlayFireMontage(bool bAiming)
 		SectionName = bAiming? FName("RifleAim") : FName( "RifleHip");
 
 		AnimInstance->Montage_JumpToSection(SectionName);
+	}
+}
+
+void ABlasterCharacter::PlayHitReactMontage()
+{
+	if (Combat == nullptr || Combat->EquippedWeapon == nullptr)
+	{
+		return;
+	}
+
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if (AnimInstance && HitReactMontage)
+	{
+		AnimInstance->Montage_Play(HitReactMontage);
+		
+		FName SectionName("FromFront");
+
+		AnimInstance->Montage_JumpToSection(SectionName);
+	}
+}
+
+void ABlasterCharacter::MulticastHit_Implementation()
+{
+	PlayHitReactMontage();
+}
+
+void ABlasterCharacter::HideCameraIfCharacterClose()
+{
+	if (!IsLocallyControlled())
+	{
+		return;
+	}
+
+	if ((FollowCamera->GetComponentLocation() - GetActorLocation()).Size() < CameraThreshold)
+	{
+		GetMesh()->SetVisibility(false);
+		if (Combat && Combat->EquippedWeapon && Combat->EquippedWeapon->GetWeaponMesh())
+		{
+			Combat->EquippedWeapon->GetWeaponMesh()->bOwnerNoSee = true;
+		}
+	}
+	else
+	{
+		GetMesh()->SetVisibility(true);
+		if (Combat && Combat->EquippedWeapon && Combat->EquippedWeapon->GetWeaponMesh())
+		{
+			Combat->EquippedWeapon->GetWeaponMesh()->bOwnerNoSee = false;
+		}
 	}
 }
 
@@ -136,6 +202,15 @@ bool ABlasterCharacter::IsWeaponEquipped()
 bool ABlasterCharacter::IsAiming()
 {
 	return (Combat && Combat->bAiming);
+}
+
+FVector ABlasterCharacter::GetHitTarget() const
+{
+	if (Combat == nullptr)
+	{
+		return FVector();
+	}
+	return Combat->HitTarget;
 }
 
 void ABlasterCharacter::OnRep_OverlappingWeapon(AWeapon* LastWeapon) //CHIAMATO SOLO NEI CLIENTS
@@ -316,6 +391,13 @@ void ABlasterCharacter::AimButtonReleased()
 	}
 }
 
+float ABlasterCharacter::CalculatedSpeed()
+{
+	FVector Velocity = GetVelocity();
+	Velocity.Z = 0.0f;
+	return Velocity.Size();
+}
+
 void ABlasterCharacter::AimOffset(float DeltaTime)
 {
 	if (Combat && Combat->EquippedWeapon == nullptr)
@@ -323,13 +405,16 @@ void ABlasterCharacter::AimOffset(float DeltaTime)
 		return;
 	}
 	
-	FVector Velocity = GetVelocity();
-	Velocity.Z = 0.0f;
-	float Speed = Velocity.Size();
+	float Speed = CalculatedSpeed();
 	bool bIsInAir = GetCharacterMovement()->IsFalling();
 
 	if (Speed == 0.f && !bIsInAir) //standing still, not jumping
 	{
+		#pragma region sync proxies turn animation - deprecated
+		//NOT USED BECAUSE SOLVED USING LYRA SOLUTION, setting Linear on the setting "Network Smoothing Mode" in BP_Blaster blueprint
+		//bRotateRootBone = true;
+		#pragma endregion
+		
 		FRotator CurrentAimRotation = FRotator(0.f, GetBaseAimRotation().Yaw, 0.f);
 		FRotator DeltaAimRotation = UKismetMathLibrary::NormalizedDeltaRotator(CurrentAimRotation, StartingAimRotation); //la differenza tra la rotazione corrente e quella iniziale
 		AO_Yaw = DeltaAimRotation.Yaw;
@@ -337,19 +422,27 @@ void ABlasterCharacter::AimOffset(float DeltaTime)
 		{
 			InterpAO_Yaw = AO_Yaw;
 		}
-		bUseControllerRotationYaw = false;
+		bUseControllerRotationYaw = true;
 		TurnInPlace(DeltaTime);
 	}
 	if (Speed > 0.f || bIsInAir) //running or jumping
 	{
+		#pragma region sync proxies turn animation - deprecated
+		//NOT USED BECAUSE SOLVED USING LYRA SOLUTION, setting Linear on the setting "Network Smoothing Mode" in BP_Blaster blueprint
+		//bRotateRootBone = true;
+		#pragma endregion
+		
 		StartingAimRotation = FRotator(0.f, GetBaseAimRotation().Yaw, 0.f);
 		AO_Yaw = 0.f;
 		bUseControllerRotationYaw = true;
 		TurningInPlace = ETurningInPlace::ETIP_NotTurning;
 	}
 
-	AO_Pitch = GetBaseAimRotation().Pitch;
+	CalculateAO_Pitch();
+}
 
+void ABlasterCharacter::CalculateAO_Pitch()
+{
 	//sui client il valore di rotazione non rimane compreso tra -90 e 0, ma a volte prende valori molto alti solo quando si guarda in basso. Questo è dovuto perchè quando
 	//vengono mandati i pacchetti di dati al server e ai client vengono trattati senza segno e convertiti quindi usando valori tra 0 e 360. Quindi qua mappiamo quel valore per i giocatori del client per renderlo di nuovo
 	//compreso tra -90 e 0
@@ -361,6 +454,59 @@ void ABlasterCharacter::AimOffset(float DeltaTime)
 		AO_Pitch = FMath::GetMappedRangeValueClamped(InRange, OutRange, AO_Pitch);
 	}
 }
+
+#pragma region sync proxies turn animation - deprecated
+//NOT USED BECAUSE SOLVED USING LYRA SOLUTION, setting Linear on the setting "Network Smoothing Mode" in BP_Blaster blueprint
+// void ABlasterCharacter::OnRep_ReplicatedMovement()
+// {
+// 	Super::OnRep_ReplicatedMovement();
+//
+// 	SimProxiesTurn();
+// 	TimeSinceLastMovementReplication = 0.f;
+// }
+
+// void ABlasterCharacter::SimProxiesTurn()
+// {
+// 	if (Combat == nullptr || Combat->EquippedWeapon == nullptr)
+// 	{
+// 		return;
+// 	}
+//
+// 	bRotateRootBone = false;
+// 	float Speed = CalculatedSpeed();
+//
+// 	if (Speed > 0.f)
+// 	{
+// 		TurningInPlace = ETurningInPlace::ETIP_NotTurning;
+// 		return;
+// 	}
+// 	
+// 	ProxyRotationLastFrame = ProxyRotation;
+// 	ProxyRotation = GetActorRotation();
+// 	ProxyYaw = UKismetMathLibrary::NormalizedDeltaRotator(ProxyRotation, ProxyRotationLastFrame).Yaw;
+//
+// 	UE_LOG(LogTemp, Warning, TEXT("ProxyYaw: %f"), ProxyYaw);
+// 	
+// 	if (FMath::Abs(ProxyYaw) > TurnThreshold)
+// 	{
+// 		bUseControllerRotationYaw = true ;
+// 		if (ProxyYaw > TurnThreshold)
+// 		{
+// 			TurningInPlace = ETurningInPlace::ETIP_Right;
+// 		}
+// 		else if (ProxyYaw < -TurnThreshold)
+// 		{
+// 			TurningInPlace = ETurningInPlace::ETIP_Left;
+// 		}
+// 		else
+// 		{
+// 			TurningInPlace = ETurningInPlace::ETIP_NotTurning;
+// 		}
+// 		return;
+// 	}
+// 	TurningInPlace = ETurningInPlace::ETIP_NotTurning;
+// }
+#pragma endregion sync proxies turn animation
 
 void ABlasterCharacter::FireButtonPressed()
 {

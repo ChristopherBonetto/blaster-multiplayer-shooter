@@ -7,12 +7,13 @@
 #include "InputAction.h"
 #include "GameFramework/Character.h"
 #include "Blaster/BlasterTypes/TurningInPlace.h"
+#include "Blaster/Interfaces/InteractWithCrosshairsInterface.h"
 #include "BlasterCharacter.generated.h"
 
 class UInputMappingContext;
 
 UCLASS()
-class BLASTER_API ABlasterCharacter : public ACharacter
+class BLASTER_API ABlasterCharacter : public ACharacter, public IInteractWithCrosshairsInterface
 {
 	GENERATED_BODY()
 
@@ -28,7 +29,10 @@ public:
 	virtual void PostInitializeComponents() override;
 
 	void PlayFireMontage(bool bAiming);
-
+	
+	UFUNCTION(NetMulticast, Unreliable)
+	void MulticastHit();
+	
 protected:
 	virtual void BeginPlay() override;
 
@@ -79,13 +83,16 @@ protected:
 
 	void AimButtonPressed();
 	void AimButtonReleased();
+	void CalculateAO_Pitch();
 
 	void AimOffset(float DeltaTime);
-
+	
 	virtual void Jump() override;
 
 	void FireButtonPressed();
 	void FireButtonReleased();
+
+	void PlayHitReactMontage();
 
 private:
 	UPROPERTY(VisibleAnywhere, Category = Camera)
@@ -125,6 +132,16 @@ private:
 
 	UPROPERTY(EditAnywhere, Category = Combat)
 	class UAnimMontage* FireWeaponMontage;
+
+	UPROPERTY(EditAnywhere, Category = Combat)
+	class UAnimMontage* HitReactMontage;
+		
+	void HideCameraIfCharacterClose();
+
+	UPROPERTY(EditAnywhere)
+	float CameraThreshold = 200.f;
+	
+	float CalculatedSpeed();
 	
 public:
 	void SetOverlappingWeapon(AWeapon* Weapon);
@@ -137,6 +154,30 @@ public:
 	FORCEINLINE float GetAO_Yaw() const { return AO_Yaw; }
 	FORCEINLINE float GetAO_Pitch() const { return AO_Pitch; }
 	FORCEINLINE ETurningInPlace GetTurningInPlace() const { return TurningInPlace; }
+	FORCEINLINE UCameraComponent* GetFollowCamera() const { return FollowCamera; }
+
+	FVector GetHitTarget() const;
+
+#pragma region sync proxies turn animation - deprecated
+	//NOT USED BECAUSE SOLVED USING LYRA SOLUTION, setting Linear on the setting "Network Smoothing Mode" in BP_Blaster blueprint
+private:
+	//NOT USED BECAUSE SOLVED USING LYRA SOLUTION, setting Linear on the setting "Network Smoothing Mode" in BP_Blaster blueprint
+	//bool bRotateRootBone;
+	// float TurnThreshold = 0.5f;
+	// float ProxyYaw;
+	// float TimeSinceLastMovementReplication;
+	// FRotator ProxyRotationLastFrame;
+	// FRotator ProxyRotation;
+	
+protected:
+	//void SimProxiesTurn();
+
+public:
+	//virtual void OnRep_ReplicatedMovement() override;
+	//FORCEINLINE bool ShouldRotateRootBone() const { return bRotateRootBone; }
+	
+#pragma endregion
+	
 };
 
 inline void ABlasterCharacter::Jump()

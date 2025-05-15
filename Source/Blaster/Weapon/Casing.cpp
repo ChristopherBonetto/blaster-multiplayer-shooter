@@ -3,6 +3,9 @@
 
 #include "Casing.h"
 
+#include "Kismet/GameplayStatics.h"
+#include "Sound/SoundCue.h"
+
 // Sets default values
 ACasing::ACasing()
 {
@@ -10,9 +13,27 @@ ACasing::ACasing()
 
 	CasingMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("CasingMesh"));
 	SetRootComponent(CasingMesh);
+
+	CasingMesh->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
+	CasingMesh->SetSimulatePhysics(true);
+	CasingMesh->SetEnableGravity(true);
+	CasingMesh->SetNotifyRigidBodyCollision(true); //Set the setting "Simulation Generates Hit Events" into the blueprint to be sure the simulated physic generate the collision event
+	ShellEjectionImpulse = 10.f;
 }
 
 void ACasing::BeginPlay()
 {
 	Super::BeginPlay();
+
+	CasingMesh->OnComponentHit.AddDynamic(this, &ACasing::OnHit);
+	CasingMesh->AddImpulse(GetActorForwardVector() * ShellEjectionImpulse);
+}
+
+void ACasing::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
+{
+	if (ShellSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, ShellSound, GetActorLocation());
+	}
+	Destroy();
 }
