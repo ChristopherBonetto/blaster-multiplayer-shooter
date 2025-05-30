@@ -82,6 +82,13 @@ void UMenu::OnCreateSession(bool bWasSuccessful)
 		UWorld* World = GetWorld();
 		if (World)
 		{
+			GEngine->AddOnScreenDebugMessage(
+				-1,
+				15.f,
+				FColor::Green,
+				FString(TEXT("Created session"))
+				);
+			
 			//Apre questo livello come listen server (= ?listen) 
 			World->ServerTravel(PathToLobby);
 		}
@@ -108,6 +115,23 @@ void UMenu::OnFindSessions(const TArray<FOnlineSessionSearchResult>& SessionResu
 	
 	// Loop tra i risultati and cerca il primo che ha il corretto match type
 
+	for (auto Result : SessionResults)
+	{
+		FString Id = Result.GetSessionIdStr();
+		FString User = Result.Session.OwningUserName;
+		FString MatchType2;
+		Result.Session.SessionSettings.Get(FName("MatchType"), MatchType2);
+
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::Cyan, FString::Printf(TEXT("Id: %s, User: %s"), *Id, *User));
+		}
+		if (MatchType2 == FString("FreeForAll"))
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::Cyan, FString::Printf(TEXT("Joining match type: %s"), *MatchType2));
+		}
+	}
+	
 	for (auto Result : SessionResults)
 	{
 		FString SettingsValue;
