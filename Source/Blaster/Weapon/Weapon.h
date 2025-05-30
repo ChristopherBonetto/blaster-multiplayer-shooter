@@ -32,6 +32,8 @@ public:
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
+	void Dropped();
+	
 	/**
 	 * Textures for the weapon crosshairs
 	 */
