@@ -21,4 +21,13 @@ public:
 
 	UPROPERTY(Meta = (BindWidget))
 	class UTextBlock* HealthText;
+
+	UPROPERTY(Meta = (BindWidget))
+	class UTextBlock* ScoreAmount;
+
+	UPROPERTY(Meta = (BindWidget))
+	class UTextBlock* DefeatsAmount;
+
+	UPROPERTY(Meta = (BindWidget))
+	class UTextBlock* DefeatMessageText;
 };

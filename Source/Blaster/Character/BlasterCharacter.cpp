@@ -19,6 +19,12 @@
 #include "Components/CapsuleComponent.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Blaster/GameMode/BlasterGameMode.h"
+#include "Blaster/PlayerState/BlasterPlayerState.h"
+#include "Kismet/GameplayStatics.h"
+#include "Particles/ParticleSystemComponent.h"
+#include "Sound/SoundCue.h"
+#include "Particles/ParticleSystemComponent.h"
+
 
 ABlasterCharacter::ABlasterCharacter()
 {
@@ -75,9 +81,21 @@ void ABlasterCharacter::BeginPlay()
 
 	UpdateHUDHealth();
 
+	ShowHUDDefeatMessage(false);
+
 	if (HasAuthority())
 	{
 		OnTakeAnyDamage.AddDynamic(this, &ABlasterCharacter::ReceiveDamage);
+	}
+}
+
+void ABlasterCharacter::Destroyed()
+{
+	Super::Destroyed();
+
+	if (ElimBotComponent)
+	{
+		ElimBotComponent->DestroyComponent();
 	}
 }
 
@@ -85,22 +103,11 @@ void ABlasterCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	// if (GetLocalRole() > ROLE_SimulatedProxy && IsLocallyControlled()) //TO AVOID TO CALL THIS FUNCTION FOR SIMULATED PROXY
-	// {
-	// 	AimOffset(DeltaTime);
-	// }
-	// else
-	// {
-	// 	TimeSinceLastMovementReplication += DeltaTime;
-	// 	if (TimeSinceLastMovementReplication > 0.25f)
-	// 	{
-	// 		OnRep_ReplicatedMovement();
-	// 	}
-	// 	CalculateAO_Pitch();
-	// }
 	AimOffset(DeltaTime);
 	
 	HideCameraIfCharacterClose();
+
+	PollInit();
 }
 
 void ABlasterCharacter::PostInitializeComponents()
@@ -150,16 +157,31 @@ void ABlasterCharacter::MulticastElim_Implementation()
 	{
 		DisableInput(BlasterPlayerController);
 	}
-
+	
 	// Disable collision
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	// Spawn Elim bot
+	if (ElimBotEffect)
+	{
+		FVector ElimBotSpawnPoint(GetActorLocation().X, GetActorLocation().Y, GetActorLocation().Z + 200.f);
+		ElimBotComponent = UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ElimBotEffect, ElimBotSpawnPoint, GetActorRotation());
+	}
+	if (ElimBotSound)
+	{
+		UGameplayStatics::SpawnSoundAtLocation(this, ElimBotSound, GetActorLocation());
+	}
+
+	ShowHUDDefeatMessage(true);
 }
 
 void ABlasterCharacter::ElimTimerFinished()
 {
 	ABlasterGameMode* BlasterGameMode = GetWorld()->GetAuthGameMode<ABlasterGameMode>();
 
+	ShowHUDDefeatMessage(false);
+	
 	if (BlasterGameMode)
 	{
 		BlasterGameMode->RequestRespawn(this, Controller);
@@ -231,7 +253,6 @@ void ABlasterCharacter::ReceiveDamage(AActor* DamagedActor, float Damage, const 
 			BlasterPlayerController = BlasterPlayerController == nullptr ? Cast<ABlasterPlayerController>(Controller) : BlasterPlayerController;
 			ABlasterPlayerController* AttackerController = Cast<ABlasterPlayerController>(InstigatorController);
 			BlasterGameMode->PlayerEliminated(this, BlasterPlayerController, AttackerController);
-		
 		}
 	}
 }
@@ -274,6 +295,30 @@ void ABlasterCharacter::UpdateHUDHealth()
 	if (BlasterPlayerController)
 	{
 		BlasterPlayerController->SetHUDHealth(Health, MaxHealth);
+	}
+}
+
+void ABlasterCharacter::ShowHUDDefeatMessage(bool IsVisible)
+{
+	BlasterPlayerController = BlasterPlayerController == nullptr? Cast<ABlasterPlayerController>(Controller): BlasterPlayerController;
+	
+	if (BlasterPlayerController)
+	{
+		BlasterPlayerController->SetHUDDefeatMessage(IsVisible);
+	}
+}
+
+void ABlasterCharacter::PollInit()
+{
+	if (BlasterPlayerState == nullptr) //Just to init at the beginning
+	{
+		BlasterPlayerState = GetPlayerState<ABlasterPlayerState>(); // NULL during the first frame when we spawn the character
+
+		if (BlasterPlayerState)
+		{
+			BlasterPlayerState->AddToScore(0.f);
+			BlasterPlayerState->AddToDefeats(0);
+		}
 	}
 }
 
@@ -632,6 +677,28 @@ void ABlasterCharacter::TurnInPlace(float DeltaTime)
 //
 // 	SimProxiesTurn();
 // 	TimeSinceLastMovementReplication = 0.f;
+// }
+
+// void ABlasterCharacter::Tick(float DeltaTime)
+// {
+// 	Super::Tick(DeltaTime);
+//
+// 	if (GetLocalRole() > ROLE_SimulatedProxy && IsLocallyControlled()) //TO AVOID TO CALL THIS FUNCTION FOR SIMULATED PROXY
+// 	{
+// 		AimOffset(DeltaTime);
+// 	}
+// 	else
+// 	{
+// 		TimeSinceLastMovementReplication += DeltaTime;
+// 		if (TimeSinceLastMovementReplication > 0.25f)
+// 		{
+// 			OnRep_ReplicatedMovement();
+// 		}
+// 		CalculateAO_Pitch();
+// 	}
+// 	AimOffset(DeltaTime);
+// 	
+// 	HideCameraIfCharacterClose();
 // }
 
 // void ABlasterCharacter::SimProxiesTurn()
