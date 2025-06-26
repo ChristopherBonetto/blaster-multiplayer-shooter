@@ -1,7 +1,10 @@
 ﻿#pragma once
 
-class CombatState
+UENUM(BlueprintType)
+enum class ECombatState : uint8
 {
-public:
+	ECS_Unoccupied UMETA(DisplayName = "Unoccupied"),
+	ECS_Reloading UMETA(DisplayName = "Reloading"),
 	
+	ECS_MAX UMETA(DisplayName = "Default Max")
 };

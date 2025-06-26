@@ -134,6 +134,11 @@ void ABlasterCharacter::Elim()
 
 void ABlasterCharacter::MulticastElim_Implementation()
 {
+	if (BlasterPlayerController)
+	{
+		BlasterPlayerController->SetHUDWeaponAmmo(0);
+	}
+	
 	bElimmed = true;
 	PlayElimMontage();
 
@@ -202,6 +207,33 @@ void ABlasterCharacter::PlayFireMontage(bool bAiming)
 		
 		FName SectionName;
 		SectionName = bAiming? FName("RifleAim") : FName( "RifleHip");
+
+		AnimInstance->Montage_JumpToSection(SectionName);
+	}
+}
+
+void ABlasterCharacter::PlayReloadMontage()
+{
+	if (Combat == nullptr || Combat->EquippedWeapon == nullptr)
+	{
+		return;
+	}
+
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if (AnimInstance && ReloadMontage)
+	{
+		AnimInstance->Montage_Play(ReloadMontage);
+		
+		FName SectionName;
+
+		switch (Combat->EquippedWeapon->GetWeaponType())
+		{
+			case EWeaponType::EWT_AssaultRifle:
+			SectionName = FName("Rifle");
+			break;
+			
+			default: ;
+		}
 
 		AnimInstance->Montage_JumpToSection(SectionName);
 	}
@@ -378,6 +410,16 @@ bool ABlasterCharacter::IsAiming()
 	return (Combat && Combat->bAiming);
 }
 
+ECombatState ABlasterCharacter::GetCombatState() const
+{
+	if (Combat == nullptr)
+	{
+		return ECombatState::ECS_MAX;
+	}
+	
+	return Combat->CombatState;
+}
+
 FVector ABlasterCharacter::GetHitTarget() const
 {
 	if (Combat == nullptr)
@@ -430,6 +472,8 @@ void ABlasterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 	EnhancedInputComponent->BindAction(Input_Fire, ETriggerEvent::Completed, this, &ABlasterCharacter::FireButtonReleased);
 
 	EnhancedInputComponent->BindAction(Input_Equip, ETriggerEvent::Triggered, this, &ABlasterCharacter::EquipButtonPressed);
+
+	EnhancedInputComponent->BindAction(Input_Reload, ETriggerEvent::Triggered, this, &ABlasterCharacter::ReloadButtonPressed);
 
 	//Gamepad
 	EnhancedInputComponent->BindAction(Input_LookStick, ETriggerEvent::Triggered, this, &ABlasterCharacter::LookStick);
@@ -526,6 +570,14 @@ void ABlasterCharacter::EquipButtonPressed()
 		{
 			ServerEquipButtonPressed(); //Non server usare il nome ServerEquipButtonPressed_Implementation perche _Implementation serve solo per la dicitura
 		}
+	}
+}
+
+void ABlasterCharacter::ReloadButtonPressed()
+{
+	if (Combat)
+	{
+		Combat->Reload();
 	}
 }
 

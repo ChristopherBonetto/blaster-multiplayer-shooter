@@ -9,6 +9,7 @@
 #include "Blaster/BlasterTypes/TurningInPlace.h"
 #include "Blaster/Interfaces/InteractWithCrosshairsInterface.h"
 #include "Components/TimelineComponent.h"
+#include "Blaster/BlasterTypes/CombatState.h"
 #include "BlasterCharacter.generated.h"
 
 class UInputMappingContext;
@@ -30,6 +31,7 @@ public:
 	virtual void PostInitializeComponents() override;
 
 	void PlayFireMontage(bool bAiming);
+	void PlayReloadMontage();
 	void PlayElimMontage();
 
 	void Elim();
@@ -58,6 +60,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category= Input, meta = (AllowPrivateAccess = "true"))
 	class UInputAction* Input_Equip;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category= Input, meta = (AllowPrivateAccess = "true"))
+	class UInputAction* Input_Reload;
+	
 	/* Crouch Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category= Input, meta = (AllowPrivateAccess = "true"))
 	class UInputAction* Input_Crouch;
@@ -84,6 +89,8 @@ protected:
 	void LookStick(const FInputActionValue& InputValue);
 
 	void EquipButtonPressed();
+
+	void ReloadButtonPressed();
 
 	void CrouchButtonPressed();
 
@@ -131,7 +138,7 @@ private:
 	UFUNCTION()
 	void OnRep_OverlappingWeapon(AWeapon* LastWeapon);
 
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	class UCombatComponent* Combat;
 
 	UFUNCTION(Server, Reliable) //RPC, puo essere reliable (lenta ma sicura) o non-reliable (piu veloce ma meno sicura, non assicura che l'informazione/pacchetto dati arrivi)
@@ -146,15 +153,22 @@ private:
 
 	void TurnInPlace(float DeltaTime);
 
+	/**
+	 * Animation montages
+	 */
+	
 	UPROPERTY(EditAnywhere, Category = Combat)
 	class UAnimMontage* FireWeaponMontage;
 
+	UPROPERTY(EditAnywhere, Category = Combat)
+	class UAnimMontage* ReloadMontage;
+	
 	UPROPERTY(EditAnywhere, Category = Combat)
 	class UAnimMontage* HitReactMontage;
 
 	UPROPERTY(EditAnywhere, Category = Combat)
 	class UAnimMontage* ElimMontage;
-		
+	
 	void HideCameraIfCharacterClose();
 
 	UPROPERTY(EditAnywhere)
@@ -242,6 +256,8 @@ public:
 	FORCEINLINE bool IsElimmed() const { return bElimmed; }
 	FORCEINLINE float GetHealth() const { return Health;}
 	FORCEINLINE float GetMaxHealth() const { return MaxHealth;}
+	
+	ECombatState GetCombatState() const;
 
 	FVector GetHitTarget() const;
 
