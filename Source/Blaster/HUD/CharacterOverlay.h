@@ -36,4 +36,7 @@ public:
 	
 	UPROPERTY(Meta = (BindWidget))
 	class UTextBlock* DefeatMessageText;
+
+	UPROPERTY(Meta = (BindWidget))
+	class UTextBlock* MatchCountdownText;
 };
