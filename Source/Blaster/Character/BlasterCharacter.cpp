@@ -73,6 +73,45 @@ void ABlasterCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	//DOREPLIFETIME(ABlasterCharacter, OverlappingWeapon); --> Questo non va bene perchè registra questa variabile come replicata per tutti, quindi cambia a tutti i client e non solo a chi si è avvicinato all'arma
 	DOREPLIFETIME_CONDITION(ABlasterCharacter, OverlappingWeapon, COND_OwnerOnly); //Questo è giusto, aggiunge la condizione di essere l'owner cioè il client che sta giocando
 	DOREPLIFETIME(ABlasterCharacter, Health);
+	DOREPLIFETIME(ABlasterCharacter, bDisableGameplay);
+}
+
+void ABlasterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
+{
+	Super::SetupPlayerInputComponent(PlayerInputComponent);
+
+	const APlayerController* PC = GetController<APlayerController>();
+	const ULocalPlayer* LP = PC->GetLocalPlayer();
+
+	UEnhancedInputLocalPlayerSubsystem* Subsystem = LP->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>();
+
+	Subsystem->ClearAllMappings();
+
+	//Add mapping for our game, more complex games may have multiple Contexts that are added/removed at runtime
+	Subsystem->AddMappingContext(DefaultInputMappingContext, 0);
+
+	//New enhanced input system
+	UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent);
+
+	//General
+	EnhancedInputComponent->BindAction(Input_Move, ETriggerEvent::Triggered, this, &ABlasterCharacter::Move);
+	EnhancedInputComponent->BindAction(Input_Jump, ETriggerEvent::Triggered, this, &ABlasterCharacter::Jump);
+	EnhancedInputComponent->BindAction(Input_Crouch, ETriggerEvent::Started, this, &ABlasterCharacter::CrouchButtonPressed);
+	
+	EnhancedInputComponent->BindAction(Input_LookMouse, ETriggerEvent::Triggered, this, &ABlasterCharacter::LookMouse);
+	
+	EnhancedInputComponent->BindAction(Input_Aim, ETriggerEvent::Started, this, &ABlasterCharacter::AimButtonPressed);
+	EnhancedInputComponent->BindAction(Input_Aim, ETriggerEvent::Completed, this, &ABlasterCharacter::AimButtonReleased);
+
+	EnhancedInputComponent->BindAction(Input_Fire, ETriggerEvent::Started, this, &ABlasterCharacter::FireButtonPressed);
+	EnhancedInputComponent->BindAction(Input_Fire, ETriggerEvent::Completed, this, &ABlasterCharacter::FireButtonReleased);
+
+	EnhancedInputComponent->BindAction(Input_Equip, ETriggerEvent::Triggered, this, &ABlasterCharacter::EquipButtonPressed);
+
+	EnhancedInputComponent->BindAction(Input_Reload, ETriggerEvent::Triggered, this, &ABlasterCharacter::ReloadButtonPressed);
+
+	//Gamepad
+	EnhancedInputComponent->BindAction(Input_LookStick, ETriggerEvent::Triggered, this, &ABlasterCharacter::LookStick);
 }
 
 void ABlasterCharacter::BeginPlay()
@@ -97,12 +136,21 @@ void ABlasterCharacter::Destroyed()
 	{
 		ElimBotComponent->DestroyComponent();
 	}
+
+	ABlasterGameMode* BlasterGameMode = Cast<ABlasterGameMode>(UGameplayStatics::GetGameMode(this));
+
+	bool bMatchNotInProgress = BlasterGameMode && BlasterGameMode->GetMatchState() != MatchState::InProgress;
+	
+	if (Combat && Combat->EquippedWeapon && bMatchNotInProgress)
+	{
+		Combat->EquippedWeapon->Destroy();
+	}
 }
 
 void ABlasterCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
+	
 	AimOffset(DeltaTime);
 	
 	HideCameraIfCharacterClose();
@@ -157,10 +205,12 @@ void ABlasterCharacter::MulticastElim_Implementation()
 	// Disable character movement
 	GetCharacterMovement()->DisableMovement();
 	GetCharacterMovement()->StopMovementImmediately();
+	
+	bDisableGameplay = true;
 
-	if (BlasterPlayerController)
+	if (Combat)
 	{
-		DisableInput(BlasterPlayerController);
+		Combat->FireButtonPressed(false);
 	}
 	
 	// Disable collision
@@ -441,44 +491,6 @@ void ABlasterCharacter::OnRep_OverlappingWeapon(AWeapon* LastWeapon) //CHIAMATO 
 	}
 }
 
-void ABlasterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
-{
-	Super::SetupPlayerInputComponent(PlayerInputComponent);
-
-	const APlayerController* PC = GetController<APlayerController>();
-	const ULocalPlayer* LP = PC->GetLocalPlayer();
-
-	UEnhancedInputLocalPlayerSubsystem* Subsystem = LP->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>();
-
-	Subsystem->ClearAllMappings();
-
-	//Add mapping for our game, more complex games may have multiple Contexts that are added/removed at runtime
-	Subsystem->AddMappingContext(DefaultInputMappingContext, 0);
-
-	//New enhanced input system
-	UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent);
-
-	//General
-	EnhancedInputComponent->BindAction(Input_Move, ETriggerEvent::Triggered, this, &ABlasterCharacter::Move);
-	EnhancedInputComponent->BindAction(Input_Jump, ETriggerEvent::Triggered, this, &ABlasterCharacter::Jump);
-	EnhancedInputComponent->BindAction(Input_Crouch, ETriggerEvent::Started, this, &ABlasterCharacter::CrouchButtonPressed);
-	
-	EnhancedInputComponent->BindAction(Input_LookMouse, ETriggerEvent::Triggered, this, &ABlasterCharacter::LookMouse);
-	
-	EnhancedInputComponent->BindAction(Input_Aim, ETriggerEvent::Started, this, &ABlasterCharacter::AimButtonPressed);
-	EnhancedInputComponent->BindAction(Input_Aim, ETriggerEvent::Completed, this, &ABlasterCharacter::AimButtonReleased);
-
-	EnhancedInputComponent->BindAction(Input_Fire, ETriggerEvent::Started, this, &ABlasterCharacter::FireButtonPressed);
-	EnhancedInputComponent->BindAction(Input_Fire, ETriggerEvent::Completed, this, &ABlasterCharacter::FireButtonReleased);
-
-	EnhancedInputComponent->BindAction(Input_Equip, ETriggerEvent::Triggered, this, &ABlasterCharacter::EquipButtonPressed);
-
-	EnhancedInputComponent->BindAction(Input_Reload, ETriggerEvent::Triggered, this, &ABlasterCharacter::ReloadButtonPressed);
-
-	//Gamepad
-	EnhancedInputComponent->BindAction(Input_LookStick, ETriggerEvent::Triggered, this, &ABlasterCharacter::LookStick);
-}
-
 void ABlasterCharacter::LookMouse(const FInputActionValue& InputValue)
 {
 	const FVector2D Value = InputValue.Get<FVector2D>();
@@ -525,6 +537,11 @@ void ABlasterCharacter::LookStick(const FInputActionValue& InputValue)
 
 void ABlasterCharacter::Move(const FInputActionInstance& Instance)
 {
+	if (bDisableGameplay)
+	{
+		return;
+	}
+	
 	FRotator ControlRot = GetControlRotation();
 	ControlRot.Pitch = 0.0f;
 	ControlRot.Roll = 0.0f;
@@ -560,6 +577,11 @@ void ABlasterCharacter::Move(const FInputActionInstance& Instance)
 
 void ABlasterCharacter::EquipButtonPressed()
 {
+	if (bDisableGameplay)
+	{
+		return;
+	}
+	
 	if (Combat) 
 	{
 		if (HasAuthority())
@@ -575,6 +597,11 @@ void ABlasterCharacter::EquipButtonPressed()
 
 void ABlasterCharacter::ReloadButtonPressed()
 {
+	if (bDisableGameplay)
+	{
+		return;
+	}
+	
 	if (Combat)
 	{
 		Combat->Reload();
@@ -591,6 +618,11 @@ void ABlasterCharacter::ServerEquipButtonPressed_Implementation()
 
 void ABlasterCharacter::CrouchButtonPressed()
 {
+	if (bDisableGameplay)
+	{
+		return;
+	}
+	
 	if (bIsCrouched)
 	{
 		UnCrouch();
@@ -603,6 +635,11 @@ void ABlasterCharacter::CrouchButtonPressed()
 
 void ABlasterCharacter::AimButtonPressed()
 {
+	if (bDisableGameplay)
+	{
+		return;
+	}
+	
 	if (Combat)
 	{
 		Combat->SetAiming(true);
@@ -611,6 +648,11 @@ void ABlasterCharacter::AimButtonPressed()
 
 void ABlasterCharacter::AimButtonReleased()
 {
+	if (bDisableGameplay)
+	{
+		return;
+	}
+	
 	if (Combat)
 	{
 		Combat->SetAiming(false);
@@ -626,6 +668,13 @@ float ABlasterCharacter::CalculatedSpeed()
 
 void ABlasterCharacter::AimOffset(float DeltaTime)
 {
+	if (bDisableGameplay)
+	{
+		bUseControllerRotationYaw = false;
+		TurningInPlace = ETurningInPlace::ETIP_NotTurning;
+		return;
+	}
+	
 	if (Combat && Combat->EquippedWeapon == nullptr)
 	{
 		return;
@@ -668,6 +717,23 @@ void ABlasterCharacter::AimOffset(float DeltaTime)
 	CalculateAO_Pitch();
 }
 
+void ABlasterCharacter::Jump()
+{
+	if (bDisableGameplay)
+	{
+		return;
+	}
+	
+	if (bIsCrouched)
+	{
+		UnCrouch();
+	}
+	else
+	{
+		Super::Jump();
+	}
+}
+
 void ABlasterCharacter::CalculateAO_Pitch()
 {
 	//sui client il valore di rotazione non rimane compreso tra -90 e 0, ma a volte prende valori molto alti solo quando si guarda in basso. Questo è dovuto perchè quando
@@ -684,6 +750,11 @@ void ABlasterCharacter::CalculateAO_Pitch()
 
 void ABlasterCharacter::FireButtonPressed()
 {
+	if (bDisableGameplay)
+	{
+		return;
+	}
+	
 	if (Combat)
 	{
 		Combat->FireButtonPressed(true);
@@ -692,6 +763,11 @@ void ABlasterCharacter::FireButtonPressed()
 
 void ABlasterCharacter::FireButtonReleased()
 {
+	if (bDisableGameplay)
+	{
+		return;
+	}
+	
 	if (Combat)
 	{
 		Combat->FireButtonPressed(false);

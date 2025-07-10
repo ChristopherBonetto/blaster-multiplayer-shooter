@@ -40,6 +40,9 @@ public:
 	void MulticastElim();
 
 	virtual void Destroyed() override;
+
+	UPROPERTY(Replicated)
+	bool bDisableGameplay = false;
 	
 protected:
 	virtual void BeginPlay() override;
@@ -256,6 +259,8 @@ public:
 	FORCEINLINE bool IsElimmed() const { return bElimmed; }
 	FORCEINLINE float GetHealth() const { return Health;}
 	FORCEINLINE float GetMaxHealth() const { return MaxHealth;}
+	FORCEINLINE UCombatComponent* GetCombatComponent() const { return Combat;}
+	FORCEINLINE bool GetDisableGameplay() const { return bDisableGameplay;}
 	
 	ECombatState GetCombatState() const;
 
@@ -282,15 +287,3 @@ public:
 #pragma endregion
 	
 };
-
-inline void ABlasterCharacter::Jump()
-{
-	if (bIsCrouched)
-	{
-		UnCrouch();
-	}
-	else
-	{
-		Super::Jump();
-	}
-}
