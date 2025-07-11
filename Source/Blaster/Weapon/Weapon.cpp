@@ -16,7 +16,8 @@ AWeapon::AWeapon()
 {
 	PrimaryActorTick.bCanEverTick = false;
 	bReplicates = true; //Settiamo l'attore come replicato, quindi avrà la possibilità di replicare variabili, in caso questo fosse false, non sarebbe in grado di replicare le vars desiderate
-
+	SetReplicateMovement(true);
+	
 	WeaponMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("WeaponMesh"));
 	WeaponMesh->SetupAttachment(RootComponent);
 	SetRootComponent(WeaponMesh);

@@ -207,6 +207,7 @@ void ABlasterCharacter::MulticastElim_Implementation()
 	GetCharacterMovement()->StopMovementImmediately();
 	
 	bDisableGameplay = true;
+	GetCharacterMovement()->DisableMovement();
 
 	if (Combat)
 	{
@@ -278,7 +279,15 @@ void ABlasterCharacter::PlayReloadMontage()
 
 		switch (Combat->EquippedWeapon->GetWeaponType())
 		{
-			case EWeaponType::EWT_AssaultRifle:
+		case EWeaponType::EWT_AssaultRifle:
+			SectionName = FName("Rifle");
+			break;
+
+		case EWeaponType::EWT_RocketLauncher:
+			SectionName = FName("Rifle");
+			break;
+
+		case EWeaponType::EWT_Pistol:
 			SectionName = FName("Rifle");
 			break;
 			
