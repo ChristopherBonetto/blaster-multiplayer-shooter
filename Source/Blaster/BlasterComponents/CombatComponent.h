@@ -12,8 +12,6 @@
 
 class AWeapon;
 
-#define TRACE_LENGHT 80000.0f
-
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class BLASTER_API UCombatComponent : public UActorComponent
 {
@@ -146,6 +144,12 @@ private:
 
 	UPROPERTY(EditAnywhere)
 	int32 StartingPistolAmmo = 0;
+
+	UPROPERTY(EditAnywhere)
+	int32 StartingSMGAmmo = 0;
+	
+	UPROPERTY(EditAnywhere)
+	int32 StartingShotgunAmmo = 0;
 	
 	UPROPERTY(EditAnywhere)
 	int32 StartingRocketAmmo = 0;

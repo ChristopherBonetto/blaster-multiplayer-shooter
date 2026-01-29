@@ -132,14 +132,6 @@ private:
 	UPROPERTY(EditAnywhere)
 	EWeaponType WeaponType;
 
-
-	/**
-	 * Ammo Types
-	 */
-	
-	UPROPERTY(VisibleAnywhere, meta = (AllowPrivateAccess = "true"))
-	class UTexture2D* AutomaticAmmoTexture;
-	
 public:
 	void SetWeaponState(EWeaponState State);
 	
